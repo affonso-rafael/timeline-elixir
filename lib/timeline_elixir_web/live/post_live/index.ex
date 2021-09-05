@@ -6,6 +6,8 @@ defmodule TimelineElixirWeb.PostLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket), do: Timeline.subscribe()
+
     {:ok, assign(socket, :posts, list_posts())}
   end
 
@@ -33,11 +35,18 @@ defmodule TimelineElixirWeb.PostLive.Index do
   end
 
   @impl true
+  @spec handle_event(<<_::48>>, map, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("delete", %{"id" => id}, socket) do
     post = Timeline.get_post!(id)
     {:ok, _} = Timeline.delete_post(post)
 
     {:noreply, assign(socket, :posts, list_posts())}
+  end
+
+  @impl true
+  def handle_info({:post_created, post}, socket) do
+    {:noreply, update(socket, :posts, fn posts -> [post | posts] end)}
   end
 
   defp list_posts do
